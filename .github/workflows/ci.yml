@@ -1,4 +1,4 @@
-name: CI/CD Pipeline for EngStudyBot
+name: CI/CD Pipeline
 
 on:
   push:
