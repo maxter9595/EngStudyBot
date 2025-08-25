@@ -74,10 +74,9 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
-            # Create necessary directories
             mkdir -p eng_audio_files_mp3
+            chmod 755 eng_audio_files_mp3
 
-            # Build and start containers
             docker compose up -d --build db pgadmin app
 
             echo 'Deployment completed successfully!'
