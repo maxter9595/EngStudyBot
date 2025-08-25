@@ -688,15 +688,15 @@ class DBRepository:
                 join(Pos, Pos.id == Words.id_pos). \
                 join(UsersWords, UsersWords.word_id == Words.id). \
                 filter(UsersWords.user_id == user_id,
-                       UsersWords.is_added == True). \
+                    UsersWords.is_added == True). \
                 all()
         else:
             query_result = session.query(Words, Pos, UsersWords). \
                 join(Pos, Pos.id == Words.id_pos). \
                 join(UsersWords, UsersWords.word_id == Words.id). \
                 filter(UsersWords.user_id == user_id,
-                       UsersWords.is_added == True,
-                       Pos.pos_name == pos_name). \
+                    UsersWords.is_added == True,
+                    Pos.pos_name == pos_name). \
                 all()
 
         session.close()

@@ -123,46 +123,61 @@ class Functionality:
                 )
 
     def get_mp3_audio(self, bot: TeleBot, data: dict, hint: str,
-                      message: telebot.types.Message) -> None:
+                    message: telebot.types.Message) -> None:
 
         """
         Запускает MP3-файл в чате Telegram.
-
-        Вводные параметры:
-        - bot: объект класса TeleBot, позволяющий выполнять
-               функционал чат-бота Telegram (написание сообщения и др.).
-        - data: словарь с данными, фиксируемыми в памяти бота.
-        - hint: строка, отражающая ответ чат-бота на
-                выбор одного из четырех вариантов слов.
-        - message: сообщение чат-бота, относительно которого
-                   параллельно запускается MP3-файл.
         """
 
         if 'Допущена ошибка!' not in hint:
             word = data['target_word']
             transcription = data['transcription']
 
-            if transcription.split():
-                mp3_name = f"{word} {transcription}.mp3"
+            safe_word = re.sub(r'[<>:"/\\|?*]', '', word)
+            safe_transcription = re.sub(r'[<>:"/\\|?*]', '', transcription) if transcription else ""
+
+            if safe_transcription:
+                mp3_name = f"{safe_word} {safe_transcription}.mp3"
             else:
-                mp3_name = f"{word}"[::-1]. \
-                               replace(" ", "", 1)[::-1] + '.mp3'
+                mp3_name = f"{safe_word}.mp3"
 
             mp3_path = os.path.join(
                 find_folder('eng_audio_files_mp3'),
                 mp3_name
             )
 
-            try:
-                bot.send_audio(
-                    chat_id=message.chat.id,
-                    audio=open(mp3_path, 'rb'),
-                    title=f"{mp3_name}",
-                    performer="Translator"
+            if not os.path.exists(mp3_path):
+                from tgbot.parsing import Parsing
+                parsing = Parsing()
+                
+                oxford_data = parsing.receive_oxford_data(
+                    en_word=word,
+                    os_='win',
+                    browser='chrome'
                 )
-                print(f'MP3 файл загружен: {mp3_path}')
-            except FileNotFoundError:
-                print(f'Аудиозапись слова не удалось найти: {mp3_path}')
+                
+                if oxford_data.get('mp_3_url'):
+                    parsing.write_user_mp3(
+                        en_word=word,
+                        mp_3_url=oxford_data.get('mp_3_url'),
+                        transcription=transcription,
+                        os_='win',
+                        browser='chrome'
+                    )
+
+            try:
+                if os.path.exists(mp3_path):
+                    bot.send_audio(
+                        chat_id=message.chat.id,
+                        audio=open(mp3_path, 'rb'),
+                        title=f"{word}",
+                        performer="Oxford Dictionary"
+                    )
+                    print(f'MP3 файл отправлен: {mp3_path}')
+                else:
+                    print(f'Аудиофайл не найден: {mp3_path}')
+            except Exception as e:
+                print(f'Ошибка при отправке аудиофайла: {e}')
 
     def check_word_letters(self, word: str, eng_bool: bool = True) -> bool:
 
@@ -228,24 +243,24 @@ class Functionality:
         total_words = len(pos_database)
 
         if total_words >= 4:
-            target_idx = random.randint(1, total_words)
+            target_idx = random.randint(0, total_words - 1)  # Исправлено: индексы от 0 до total_words-1
             target_dict = pos_database[target_idx]
             target_word = target_dict.get('en_word')
 
             other_words = []
             while len(other_words) < 3:
-                other_idx = random.randint(1, total_words)
+                other_idx = random.randint(0, total_words - 1)  # Исправлено: индексы от 0 до total_words-1
 
                 if other_idx != target_idx:
                     other_word = pos_database[other_idx].get('en_word')
 
-                    if other_word != target_word:
+                    if other_word != target_word and other_word not in other_words:
                         other_words.append(other_word)
 
             ru_translation = target_dict.get('ru_word')
-            transcription = target_dict.get('en_trans')
-            en_example = target_dict.get('en_example')
-            ru_example = target_dict.get('ru_example')
+            transcription = target_dict.get('en_trans', '')
+            en_example = target_dict.get('en_example', 'No example')
+            ru_example = target_dict.get('ru_example', 'Пример отсутствует')
 
             return (target_word, ru_translation, other_words,
                     transcription, en_example, ru_example)
@@ -291,17 +306,16 @@ class Functionality:
         )
 
     def show_target(self, data: dict) -> str:
-
         """
-        Выводит строку "целевое англ. слово -> перевод слова" в чат
+        Выводит строку "целевое англ. слово [транскрипция] -> перевод слова" в чат
         Telegram бота при наличии корректного ответа пользователя.
-
-        Вводный параметр:
-        - data: словарь с данными, фиксируемыми в памяти бота.
-
-        Выводимый параметр:
-        - строка, имеющая следующую структуру:
-          "целевое английское слово -> перевод целевого английского слова".
         """
-
-        return f"{data['target_word']} -> {data['translate_word']}"
+        
+        target_word = data['target_word']
+        transcription = data['transcription']
+        translate_word = data['translate_word']
+        
+        if transcription and transcription.strip():
+            return f"{target_word} {transcription} → {translate_word}"
+        else:
+            return f"{target_word} → {translate_word}"

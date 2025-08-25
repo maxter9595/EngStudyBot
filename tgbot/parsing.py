@@ -288,38 +288,34 @@ class Parsing:
                 return False
 
     def write_user_mp3(self, en_word: str, mp_3_url: str,
-                       transcription: str, os_: str,
-                       browser: str) -> None:
+                    transcription: str, os_: str,
+                    browser: str) -> str:
 
         """
-         1. Задает название MP3-файла с учетом наличия
-         транскрипции у заданного английского слова.
-         2. Создает путь, по которому будет записан MP3-файл
-         3. Реализовывает запись файла через метод write_mp3
+        1. Задает название MP3-файла с учетом наличия
+        транскрипции у заданного английского слова.
+        2. Создает путь, по которому будет записан MP3-файл
+        3. Реализовывает запись файла через метод write_mp3
             (если он не существует внутри папки eng_audio_files_mp3)
 
-        Вводные параметры:
-        - en_word: английское слово
-        - mp_3_url: ссылка на MP3-файл
-        - transcription: транскрипция английского слова
-        - os_: сокращенное название операционной системы
-        - browser: название браузера
+        Возвращает путь к файлу
         """
 
         if mp_3_url:
             if transcription:
-                mp3_path = os.path.join(
-                    find_folder('eng_audio_files_mp3'),
-                    f'{en_word} {transcription}.mp3'
-                )
+                mp3_name = f"{en_word} {transcription}.mp3"
             else:
-                mp3_path = os.path.join(
-                    find_folder('eng_audio_files_mp3'),
-                    f'{en_word[::-1].replace(" ", "", 1)[::-1]}.mp3'
-                )
+                mp3_name = f"{en_word}.mp3"
+            
+            mp3_name = re.sub(r'[<>:"/\\|?*]', '', mp3_name)
+            
+            mp3_path = os.path.join(
+                find_folder('eng_audio_files_mp3'),
+                mp3_name
+            )
 
             if not os.path.exists(mp3_path):
-                self.write_mp3(
+                success = self.write_mp3(
                     url=mp_3_url,
                     file_path=mp3_path,
                     os_=os_,
@@ -327,23 +323,22 @@ class Parsing:
                     attempts=3,
                     error_timeout=10
                 )
+                if success:
+                    print(f'Аудиофайл сохранен: {mp3_path}')
+                    return mp3_path
+                else:
+                    print(f'Не удалось скачать аудиофайл: {mp_3_url}')
+                    return None
+            else:
+                print(f'Аудиофайл уже существует: {mp3_path}')
+                return mp3_path
+        return None
 
     def get_word_info(self, en_word: str, pos_list: list,
-                      os_: str, browser: str) -> list[dict]:
+                    os_: str, browser: str) -> list[dict]:
 
         """
         Выводит обобщающую информацию об английском слове.
-
-        Вводные параметры:
-        - en_word: английское слово, которое хотим найти
-                   в онлайн-словаре Oxford
-        - pos_list: список учитываемых частей речи
-        - os: сокращенное название операционной системы
-        - browser: название браузера
-
-        Выводной параметр:
-        - список словарей с обобщающей информацией об
-          английском слове в разрезе отдельных частей речи
         """
 
         promt_data = self.receive_promt_data(
@@ -370,15 +365,18 @@ class Parsing:
                 if word_dict.get('ru_word') is None:
                     word_list.pop(idx)
 
+        audio_downloaded = False
         for word_dict in word_list:
-            if word_dict.get('mp_3_url', None):
-                self.write_user_mp3(
+            if word_dict.get('mp_3_url') and not audio_downloaded:
+                mp3_path = self.write_user_mp3(
                     en_word=word_dict.get('en_word'),
                     mp_3_url=word_dict.get('mp_3_url'),
                     transcription=word_dict.get('en_trans'),
                     os_=os_,
                     browser=browser
                 )
+                if mp3_path:
+                    audio_downloaded = True
                 break
 
         return word_list

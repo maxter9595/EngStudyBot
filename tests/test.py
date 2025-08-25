@@ -17,6 +17,8 @@ load_dotenv()
 TEST_DBNAME = os.getenv(key='TEST_DB_NAME')
 USER = os.getenv(key='DB_USER')
 PASSWORD = os.getenv(key='DB_PASSWORD')
+HOST = os.getenv(key='HOST', default='localhost')
+PORT = os.getenv(key='PORT', default='5432')
 
 POS_LIST = [
     'noun',
@@ -50,12 +52,16 @@ class Tests:
         self.test_database = DBCreation(
             dbname=TEST_DBNAME,
             user=USER,
-            password=PASSWORD
+            password=PASSWORD,
+            host=HOST,
+            port=PORT
         )
         self.test_repository = DBRepository(
             dbname=TEST_DBNAME,
             user=USER,
-            password=PASSWORD
+            password=PASSWORD,
+            host=HOST,
+            port=PORT
         )
         self.test_parsing = Parsing()
         self.test_functionality = Functionality()
