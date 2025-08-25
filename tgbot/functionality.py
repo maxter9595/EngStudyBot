@@ -1,12 +1,12 @@
 import os
-import re
 import random
-from typing import Optional
+import re
 from string import ascii_letters
+from typing import Optional
 
 import telebot
 from telebot import TeleBot, types
-from telebot.asyncio_handler_backends import StatesGroup, State
+from telebot.asyncio_handler_backends import State, StatesGroup
 
 from filefinder import find_folder
 
@@ -242,28 +242,43 @@ class Functionality:
 
         total_words = len(pos_database)
 
-        if total_words >= 4:
-            target_idx = random.randint(0, total_words - 1)  # Исправлено: индексы от 0 до total_words-1
+        if total_words < 1:
+            return None
+
+        if total_words < 4:
+            target_idx = random.randint(0, total_words - 1)
+            target_dict = pos_database[target_idx]
+            target_word = target_dict.get('en_word')
+
+            other_words = []
+            for idx in range(total_words):
+                if idx != target_idx:
+                    other_word = pos_database[idx].get('en_word')
+                    other_words.append(other_word)
+
+            while len(other_words) < 3:
+                other_words.append("")
+
+        else:
+            target_idx = random.randint(0, total_words - 1)
             target_dict = pos_database[target_idx]
             target_word = target_dict.get('en_word')
 
             other_words = []
             while len(other_words) < 3:
-                other_idx = random.randint(0, total_words - 1)  # Исправлено: индексы от 0 до total_words-1
-
+                other_idx = random.randint(0, total_words - 1)
                 if other_idx != target_idx:
                     other_word = pos_database[other_idx].get('en_word')
-
                     if other_word != target_word and other_word not in other_words:
                         other_words.append(other_word)
 
-            ru_translation = target_dict.get('ru_word')
-            transcription = target_dict.get('en_trans', '')
-            en_example = target_dict.get('en_example', 'No example')
-            ru_example = target_dict.get('ru_example', 'Пример отсутствует')
+        ru_translation = target_dict.get('ru_word')
+        transcription = target_dict.get('en_trans', '')
+        en_example = target_dict.get('en_example', 'No example')
+        ru_example = target_dict.get('ru_example', 'Пример отсутствует')
 
-            return (target_word, ru_translation, other_words,
-                    transcription, en_example, ru_example)
+        return (target_word, ru_translation, other_words,
+                transcription, en_example, ru_example)
 
     def show_hint(self, *lines: str) -> str:
 

@@ -1,12 +1,11 @@
 import random
 
+from telebot import TeleBot, custom_filters, types
 from telebot.storage import StateMemoryStorage
-from telebot import types, TeleBot, custom_filters
 
 from database.repository import DBRepository
+from tgbot.functionality import Command, Functionality, States
 from tgbot.parsing import Parsing
-from tgbot.functionality import Functionality, Command, States
-
 
 parsing = Parsing()
 functionality = Functionality()
@@ -60,10 +59,25 @@ def start_game_handler(bot: TeleBot, repository: DBRepository) -> None:
             pos_name=random.choice(POS_LIST)
         )
 
-        (target_word, translate, others, transcription,
-         en_example, ru_example) = functionality.get_random_words(
+        result = functionality.get_random_words(
             pos_database=user_database
         )
+
+        if result is None:
+            bot.send_message(
+                chat_id=chat_id,
+                text="В вашей базе данных недостаточно слов для тренировки. Добавьте больше слов с помощью команды 'Добавить слово ➕'."
+            )
+            return
+
+        (
+            target_word, 
+            translate, 
+            others, 
+            transcription,
+            en_example, 
+            ru_example
+        ) = result
 
         global buttons
         buttons, markup = functionality.setup_buttons(

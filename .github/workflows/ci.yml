@@ -1,0 +1,84 @@
+name: CI/CD Pipeline for EngStudyBot
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: TestEngStudyBot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        env:
+          TEST_DB_NAME: TestEngStudyBot
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          HOST: localhost
+          PORT: 5432
+        run: |
+          python -m pytest tests/test.py -v
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Test SSH connection
+        run: ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} echo "SSH OK"
+
+      - name: Deploy to server
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            set -e
+            cd ~/EngStudyBot || exit
+
+            git fetch origin
+            git reset --hard origin/main
+
+            # Create necessary directories
+            mkdir -p eng_audio_files_mp3
+
+            # Build and start containers
+            docker compose up -d --build db pgadmin app
+
+            echo 'Deployment completed successfully!'
+          "

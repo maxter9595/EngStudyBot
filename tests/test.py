@@ -2,15 +2,14 @@ import os
 import random
 
 import pytest
-from sqlalchemy import Engine
 from dotenv import load_dotenv
+from sqlalchemy import Engine
 
-from tgbot.parsing import Parsing
 from database.creation import DBCreation
-from database.structure import get_table_list
 from database.repository import DBRepository
+from database.structure import get_table_list
 from tgbot.functionality import Functionality
-
+from tgbot.parsing import Parsing
 
 load_dotenv()
 
@@ -503,24 +502,97 @@ class Tests:
         )
         assert actual_bool == expected_bool
 
+    # @pytest.mark.parametrize(
+    #     'user_dict,expected_bool',
+    #     ([TEST_USER_DICT, True],)
+    # )
+    # def test_get_random_words(self, user_dict: dict,
+    #                           expected_bool: bool) -> None:
+    #     user_id = user_dict.get('user_id')
+    #     pos_database = self.test_repository.get_user_words(
+    #         user_id=user_id,
+    #         pos_name=random.choice(POS_LIST)
+    #     )
+    #     (target_word, translate, others, _,
+    #      _, _) = self.test_functionality.get_random_words(
+    #         pos_database=pos_database
+    #     )
+    #     actual_bool = (
+    #             (len(target_word) > 0) and
+    #             (len(translate) > 0) and
+    #             (len(others) > 0)
+    #     )
+    #     assert actual_bool == expected_bool
+
     @pytest.mark.parametrize(
-        'user_dict,expected_bool',
-        ([TEST_USER_DICT, True],)
+        'user_dict,expected_result',
+        [
+            ([TEST_USER_DICT], None),  # Нет слов
+            ([TEST_USER_DICT], tuple),  # Мало слов (1-3)
+            ([TEST_USER_DICT], tuple),  # Достаточно слов (4+)
+        ]
     )
-    def test_get_random_words(self, user_dict: dict,
-                              expected_bool: bool) -> None:
-        user_id = user_dict.get('user_id')
-        pos_database = self.test_repository.get_user_words(
-            user_id=user_id,
-            pos_name=random.choice(POS_LIST)
-        )
-        (target_word, translate, others, _,
-         _, _) = self.test_functionality.get_random_words(
-            pos_database=pos_database
-        )
-        actual_bool = (
-                (len(target_word) > 0) and
-                (len(translate) > 0) and
-                (len(others) > 0)
-        )
-        assert actual_bool == expected_bool
+    def test_get_random_words_edge_cases(self, user_dict: dict, expected_result: type) -> None:
+        """Тестирование крайних случаев для get_random_words"""
+        user_id = user_dict[0].get('user_id')
+        
+        # Тест 1: Нет слов в базе
+        empty_database = []
+        result = self.test_functionality.get_random_words(empty_database)
+        assert result is None, "Для пустой базы должен возвращаться None"
+        
+        # Тест 2: 1 слово в базе
+        single_word_db = [{
+            'en_word': 'test',
+            'ru_word': 'тест',
+            'en_trans': '[test]',
+            'en_example': 'This is a test',
+            'ru_example': 'Это тест'
+        }]
+        result = self.test_functionality.get_random_words(single_word_db)
+        assert result is not None, "Для одного слова должен возвращаться кортеж"
+        assert len(result) == 6, "Кортеж должен содержать 6 элементов"
+        
+        # Тест 3: 3 слова в базе
+        three_words_db = [
+            {'en_word': 'word1', 'ru_word': 'слово1', 'en_trans': '', 'en_example': '', 'ru_example': ''},
+            {'en_word': 'word2', 'ru_word': 'слово2', 'en_trans': '', 'en_example': '', 'ru_example': ''},
+            {'en_word': 'word3', 'ru_word': 'слово3', 'en_trans': '', 'en_example': '', 'ru_example': ''}
+        ]
+        result = self.test_functionality.get_random_words(three_words_db)
+        assert result is not None, "Для трех слов должен возвращаться кортеж"
+        
+        target_word, translate, others, transcription, en_example, ru_example = result
+        assert len(others) == 3, "Должно быть 3 других слова"
+
+    @pytest.mark.parametrize(
+        'word_count,expected_behavior',
+        [
+            (0, 'show_warning'),  # Нет слов - показать предупреждение
+            (2, 'create_game'),   # Мало слов - создать игру
+            (5, 'create_game'),   # Достаточно слов - создать игру
+        ]
+    )
+    def test_insufficient_words_handling(self, word_count: int, expected_behavior: str) -> None:
+        """Тестирование обработки недостаточного количества слов"""
+        
+        # Создаем мок базы данных с нужным количеством слов
+        mock_database = []
+        for i in range(word_count):
+            mock_database.append({
+                'en_word': f'word{i}',
+                'ru_word': f'слово{i}',
+                'en_trans': f'[word{i}]',
+                'en_example': f'Example {i}',
+                'ru_example': f'Пример {i}'
+            })
+        
+        # Тестируем get_random_words
+        result = self.test_functionality.get_random_words(mock_database)
+        
+        if word_count == 0:
+            assert result is None, "Для пустой базы должен возвращаться None"
+            # Здесь можно проверить, что бот отправит сообщение о недостатке слов
+        else:
+            assert result is not None, f"Для {word_count} слов должен возвращаться кортеж"
+            assert len(result) == 6, "Кортеж должен содержать 6 элементов"
