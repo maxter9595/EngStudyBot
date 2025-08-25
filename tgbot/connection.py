@@ -151,7 +151,7 @@ def delete_word_handler(bot: TeleBot, repository: DBRepository) -> None:
                 bot.send_message(
                     chat_id=cid,
                     text=functionality.show_hint(*[
-                        'Слово должно содержать только английские буквы и символы.',
+                        'Слово должно содержать только английские буквы.',
                         '',
                         'Пожалуйста, повторите попытку нажатием на кнопку',
                         f'{Command.DELETE_WORD.lower()}'])
@@ -301,7 +301,7 @@ def add_word_handler(bot: TeleBot, repository: DBRepository) -> None:
                     bot.send_message(
                         chat_id=cid,
                         text=functionality.show_hint(*[
-                            'Слово должно содержать только английские буквы и символы.',
+                            'Слово должно содержать только английские буквы.',
                             '',
                             'Пожалуйста, повторите попытку нажатием на кнопку',
                             f'{Command.ADD_WORD.lower()}'])
