@@ -404,7 +404,7 @@ def reply_handler(bot: TeleBot) -> None:
 
                 if text == target_word:
                     hint = functionality.show_target(data)
-                    hint = functionality.show_hint(*["Отлично! ❤", hint])
+                    hint = functionality.show_hint(*["Отлично! ❤❤❤", hint])
 
                 else:
                     for btn in buttons[:4]:
