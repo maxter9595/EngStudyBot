@@ -87,10 +87,10 @@ cd EngStudyBot
 
 * Документация по Telegram Bot API: [https://core.telegram.org/bots/api](https://core.telegram.org/bots/api)
 
-* Копирование переменных окружения с заменой значения переменной ```TG_TOKEN``` на валидный Telegram-токен:
+* Задание переменных окружения с учетом валидного Telegram-токена:
 
 ```bash
-# 7...O4 - Telegram-токен, заменяющий your_token
+# 7...O4 - Telegram-токен, заменяющий фразу "your_token"
 bash -c "cp .env_example .env && sed -i 's/your_token/7...O4/g' .env"
 ```
 
@@ -171,5 +171,123 @@ Password: postgres
 
 ```bash
 # Входим по IP и паролю, выданными на почту
-ssh root@
+ssh root@91.197.99.158
 ```
+
+<img src="./demo/4-server-deploy/1.gif" width="100%">
+
+### 4.2. Подготовка сервера для деплоя
+
+* Создание пользователя и добавление его в группу sudo:
+
+```bash
+adduser myclouduser
+usermod -aG sudo myclouduser
+```
+
+* Установка зависимостей:
+
+```bash
+apt update && apt upgrade -y
+apt install -y git nginx ufw
+```
+
+* Настройка firewall:
+
+```bash
+sudo ufw allow 5432
+sudo ufw allow 5050
+sudo ufw allow 22
+ufw allow 80
+ufw enable
+```
+
+* Запуск Docker:
+
+```bash
+# На выбранном сервере Docker уже предустановлен
+systemctl enable docker
+systemctl start docker
+```
+
+* Добавление пользователя в группу docker и его переподключение на сервер для утверждения прав:
+
+```bash
+usermod -aG docker myclouduser
+exit
+
+# Входим по паролю, заданному пользователю через adduser myclouduser
+ssh myclouduser@91.197.99.158
+```
+
+<img src="./demo/4-server-deploy/2.gif" width="100%">
+
+### 4.3. Клонирование репозитория. Подготовка переменных окружения
+
+* Клонирование репозитория:
+
+```bash
+git clone https://github.com/maxter9595/EngStudyBot.git
+cd EngStudyBot
+```
+
+<img src="./demo/4-server-deploy/3-1.gif" width="100%">
+
+* Задание переменных окружения с учетом валидного Telegram-токена:
+
+```bash
+# 7...O4 - Telegram-токен, заменяющий фразу "your_token"
+cp .env_example .env && sed -i "s/your_token/7...O4/g" .env
+```
+
+<img src="./demo/4-server-deploy/3-2.png" width="100%">
+
+### 4.4. Запуск Docker
+
+* Сборка и запуск Docker:
+
+```bash
+cd ~/MyCloudApp
+docker compose build
+docker compose up -d
+```
+
+* Проверка наличия Docker контейнеров и запуск тестов:
+
+```bash
+docker compose ps
+docker compose run test
+```
+
+<img src="./demo/4-server-deploy/4.gif" width="100%">
+
+### 4.5. Настройка админской панели СУБД PostgreSQL
+
+* Админка PostgreSQL (через PGAdmin): [http://91.197.99.158:5050/](http://91.197.99.158:5050/)
+
+* Данные администратора БД для входа в административную панель СУБД PostgreSQL:
+
+```
+Почта: admin@example.com
+Пароль: admin123
+```
+
+* `Register...` ➝ `Server...`. Данные соединения к БД в СУБД PostgreSQL:
+
+```
+Host: db
+Port: 5432
+Maintenance database: EngStudyBot
+Username: postgres
+Password: postgres
+```
+
+<img src="./demo/4-server-deploy/5.gif" width="100%">
+
+### 4.6. Открытие приложения
+
+* Смотрим на работу Telegram-бота
+
+<img src="./demo/4-server-deploy/6.gif" width="100%">
+
+## 5. Настройка автодеплоя проекта (CI/CD)
