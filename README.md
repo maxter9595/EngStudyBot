@@ -291,3 +291,206 @@ Password: postgres
 <img src="./demo/4-server-deploy/6.gif" width="100%">
 
 ## 5. Настройка автодеплоя проекта (CI/CD)
+
+### 5.1. Генерация SSH-ключа на локальном ПК
+
+* Генерация SSH-ключа на локальном ПК:
+
+```bash
+ssh-keygen -t ed25519 -C "max.t95@bk.ru"
+```
+
+* Вывод SSH-ключа из локального ПК для копирования:
+
+```bash
+type $env:USERPROFILE\.ssh\id_ed25519.pub
+```
+
+```bash
+# Копируем SSH-ключ
+ssh-ed25519 AAAA...g5 max.t95@bk.ru
+```
+
+<img src="./demo/5-ci-cd/1.png" width="100%">
+
+### 5.2. Генерация SSH-ключа на сервере
+
+* Вход на сервер:
+
+```bash
+ssh myclouduser@91.197.99.158
+```
+
+* Генерация SSH-ключа на сервере:
+
+```bash
+ssh-keygen -t ed25519 -C "max.t95@bk.ru"
+```
+
+* Вывод SSH-ключа из сервера для просмотра:
+
+```bash
+ssh-keygen -y -f ~/.ssh/id_ed25519
+```
+
+```bash
+# SSH-ключ из сервера понадобится для удаленного подключения к GitHub
+ssh-ed25519 AAAA...hc max.t95@bk.ru
+```
+
+<img src="./demo/5-ci-cd/2.png" width="100%">
+
+### 5.3. Добавление SSH-ключей из локального ПК и сервера в список авторизованных ключей сервера
+
+* Ввод SSH-ключа из сервера в список авторизированных ключей:
+
+```bash
+ssh-keygen -y -f ~/.ssh/id_ed25519 >> ~/.ssh/authorized_keys
+```
+
+* Ввод SSH-ключа из локального ПК в список авторизированных ключей:
+
+```bash
+echo "ssh-ed25519 AAAA...g5 max.t95@bk.ru" >> ~/.ssh/authorized_keys
+```
+
+* Просмотр списка авторизированных ключей:
+
+```bash
+cat ~/.ssh/authorized_keys
+```
+
+```bash
+# В итоге должно быть два SSH-ключа в списке авторизованных ключей
+ssh-ed25519 AAAA...hc max.t95@bk.ru
+ssh-ed25519 AAAA...g5 max.t95@bk.ru
+```
+
+<img src="./demo/5-ci-cd/3.png" width="100%">
+
+### 5.4. Настройка sudo без пароля для CI/CD
+
+* Настройка прав для authorized_keys:
+
+```bash
+chmod 600 ~/.ssh/authorized_keys
+chmod 700 ~/.ssh
+```
+
+* Вход в visudo и добавление параметров для обхода паролей пользователя при деплое:  
+
+```bash
+sudo visudo
+```
+
+```bash
+# Добавляем в конце файла следующее:
+myclouduser ALL=(ALL) NOPASSWD: ALL
+```
+
+* Выход из сервера и проверка входа на сервер без пароля:
+
+```bash
+exit
+ssh myclouduser@91.197.99.158
+# Если всё ок — войдём без пароля
+```
+
+<img src="./demo/5-ci-cd/4.gif" width="100%">
+
+### 5.5. Привязка SSH-ключа к GitHub
+
+* Вывод публичного SSH-ключа для взаимодействия с GitHub:
+
+```bash
+cat ~/.ssh/id_ed25519.pub
+```
+
+```bash
+# Копируем все, что будет выведено
+ssh-ed25519 AAAA...hc max.t95@bk.ru
+```
+
+* Настройка публичного ключа к GitHub:
+
+   * ```Сайт GitHub``` → ```Settings``` → ```SSH and GPG keys``` → ```New SSH key```. Заполняем параметры SHH-ключа:
+
+     * Тип ключа: ```Authentication Key``` 
+  
+     * Имя ключа: ```VM-server```
+
+     * В поле ```Key``` добавляем содержимое SSH-ключа. Пример - ```ssh-ed25519 AAAA...hc max.t95@bk.ru```
+
+  * После добавления параметров SSH-ключа нажимаем ```Add SSH key```
+
+<img src="./demo/5-ci-cd/5.png" width="100%">
+
+### 5.6.Настройка файла SSH-конфигурации. Проверка подключения к GitHub
+
+* Внесение GitHub в список известных хостов сервера:
+
+```bash
+ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+```
+
+* Настройка конфигурации для SSH:
+
+```bash
+nano ~/.ssh/config
+```
+
+```
+----- ~/.ssh/config -----
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+----- ~/.ssh/config -----
+```
+
+* Задание прав для файла SSH-конфигурации:
+
+```bash
+chmod 600 ~/.ssh/config
+```
+
+* Проверка взаимодействия с GitHub:
+
+```bash
+ssh -T git@github.com
+# Если всё ок — увидим это сообщение:
+# Hi <логин>! You've successfully authenticated ...
+```
+
+<img src="./demo/5-ci-cd/6.gif" width="100%">
+
+### 5.7. Установка значений secret-параметров GitHub-репозитория для автодеплоя
+
+* Ввод команды на сервере для получения ```SSH_PRIVATE_KEY```:
+
+```bash
+cat ~/.ssh/id_ed25519
+```
+
+```bash
+# Копируем все вместе с комментариями BEGIN и END
+-----BEGIN OPENSSH PRIVATE KEY----- 
+b3...= 
+-----END OPENSSH PRIVATE KEY-----
+```
+
+* Ввод secrets для автодеплоя GitHub-репозитория:
+
+  * SSH_HOST: ```91.197.99.158``` (или другой IP-адрес сервера)
+
+  * SSH_USER: ```myappuser```
+
+  * SSH_PRIVATE_KEY: результат команды ```cat ~/.ssh/id_ed25519``` на сервере
+
+  * TG_TOKEN: Telegram-токен
+
+<img src="./demo/5-ci-cd/7-1.png" width="100%">
+
+* После установки secrets проверяем функционал автодеплоя
+
+<img src="./demo/5-ci-cd/7-2.gif" width="100%">
