@@ -179,8 +179,8 @@ ssh root@91.197.99.158
 * Создание пользователя и добавление его в группу sudo:
 
 ```bash
-adduser myclouduser
-usermod -aG sudo myclouduser
+adduser myappuser
+usermod -aG sudo myappuser
 ```
 
 * Установка зависимостей:
@@ -211,11 +211,11 @@ systemctl start docker
 * Добавление пользователя в группу docker и его переподключение на сервер для утверждения прав:
 
 ```bash
-usermod -aG docker myclouduser
+usermod -aG docker myappuser
 exit
 
-# Вход по паролю, заданному пользователю через adduser myclouduser
-ssh myclouduser@91.197.99.158
+# Вход по паролю, заданному пользователю через adduser myappuser
+ssh myappuser@91.197.99.158
 ```
 
 <img src="./demo/4-server-deploy/2.gif" width="100%">
@@ -316,7 +316,7 @@ ssh-ed25519 AAAA...g5 max.t95@bk.ru
 * Вход на сервер:
 
 ```bash
-ssh myclouduser@91.197.99.158
+ssh myappuser@91.197.99.158
 ```
 
 * Генерация SSH-ключа на сервере:
@@ -383,14 +383,14 @@ sudo visudo
 
 ```bash
 # Добавляем в конце файла следующее:
-myclouduser ALL=(ALL) NOPASSWD: ALL
+myappuser ALL=(ALL) NOPASSWD: ALL
 ```
 
 * Выход из сервера и проверка входа на сервер без пароля:
 
 ```bash
 exit
-ssh myclouduser@91.197.99.158
+ssh myappuser@91.197.99.158
 # Если всё ок — войдём без пароля
 ```
 
